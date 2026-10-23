@@ -1,0 +1,78 @@
+/* Reset and Typography */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  width: 100%;
+  height: 100vh;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden; /* No scrolling allowed */
+  background: #f4f4f4;
+}
+
+/* Main Split Container */
+.split-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem; /* The "Frame" around the card */
+}
+
+/* The Large Unified Card */
+.main-card {
+  display: flex;
+  background: white;
+  width: 100%;
+  max-width: 1100px;
+  height: 85vh;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+}
+
+/* Left Branding Side */
+.branding-side {
+  flex: 1;
+  background: linear-gradient(135deg, #fff5f2 0%, #ffe0d6 30%, #ff8c61 100%);
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #2d3748;
+}
+
+/* Right Form Side */
+.form-side {
+  flex: 1;
+  padding: 4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Input Styles */
+.custom-input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  outline: none;
+}
+
+.custom-button {
+  width: 100%;
+  background: #111;
+  color: white;
+  padding: 14px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  margin-top: 2rem;
+  cursor: pointer;
+}

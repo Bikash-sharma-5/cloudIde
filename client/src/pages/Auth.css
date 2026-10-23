@@ -1,0 +1,381 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap");
+
+/*
+  Everything is prefixed with "cf-" so old global CSS (index.css / App.css)
+  cannot override it. The page is position:fixed so it also ignores any
+  #root padding / centering from the Vite or CRA starter styles.
+*/
+
+.cf-auth {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  background: #ffffff;
+  color: #111827;
+  color-scheme: light;
+  text-align: left;
+  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.cf-auth *,
+.cf-auth *::before,
+.cf-auth *::after {
+  box-sizing: border-box;
+}
+
+/* ---------- Left: brand panel ---------- */
+.cf-brand {
+  background: #0c1a33;
+  color: #ffffff;
+  padding: 40px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.cf-wordmark {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cf-brand h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 4.2vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  max-width: 9em;
+}
+
+.cf-brand-copy {
+  margin: 16px 0 0;
+  max-width: 26em;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1rem;
+}
+
+
+/* editor mock */
+.cf-editor {
+  width: 100%;
+  max-width: 440px;
+  background: #14284d;
+  border: 1px solid #263f6c;
+  border-radius: 8px;
+  overflow: hidden;
+  color: #cdd6e6;
+}
+
+.cf-editor-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #263f6c;
+  font-size: 0.8rem;
+  color: #93a4c3;
+}
+
+.cf-code {
+  padding: 14px 16px 10px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 2;
+}
+
+.cf-line { white-space: pre; }
+.cf-i1 { padding-left: 1.6em; }
+.cf-i2 { padding-left: 3.2em; }
+.cf-k { color: #ff9a62; }
+.cf-f { color: #5eead4; }
+
+.cf-caret {
+  position: relative;
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+}
+
+.cf-caret b {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  padding: 0 6px;
+  border-radius: 3px 3px 3px 0;
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #0c1a33;
+  white-space: nowrap;
+}
+
+.cf-caret-a, .cf-caret-a b { background: #ff9a62; }
+.cf-caret-b, .cf-caret-b b { background: #5eead4; }
+
+.cf-meters {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #263f6c;
+  font-size: 0.8rem;
+  color: #93a4c3;
+}
+
+.cf-meter {
+  display: grid;
+  grid-template-columns: 64px 1fr 56px;
+  align-items: center;
+  gap: 12px;
+}
+
+.cf-meter i {
+  display: block;
+  height: 4px;
+  background: #263f6c;
+}
+
+.cf-meter u {
+  display: block;
+  height: 100%;
+  background: #ff9a62;
+}
+
+.cf-meter span:last-child { text-align: right; }
+
+/* ---------- Right: form ---------- */
+.cf-form-side {
+  display: flex;
+  align-items: center;
+  padding: 48px 7vw;
+}
+
+.cf-form-wrap {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.cf-form-wrap h2 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #111827;
+}
+
+.cf-sub {
+  margin: 0 0 32px;
+  color: #4b5565;
+}
+
+.cf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cf-field label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #344054;
+}
+
+.cf-input {
+  display: block;
+  width: 100%;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1.5px solid #c5cad6;
+  border-radius: 0;
+  background: transparent;
+  color: #111827;
+  font: inherit;
+  font-size: 1rem;
+  box-shadow: none;
+  transition: border-color 0.15s;
+}
+
+.cf-input::placeholder {
+  color: #98a2b3;
+}
+
+.cf-input:hover {
+  border-bottom-color: #8a94a6;
+}
+
+.cf-input:focus {
+  outline: none;
+  border-bottom-color: #c2410c;
+  box-shadow: 0 1.5px 0 0 #c2410c;
+}
+
+.cf-input.cf-invalid {
+  border-bottom-color: #d92d20;
+}
+
+.cf-pass {
+  position: relative;
+}
+
+.cf-pass .cf-input {
+  padding-right: 56px;
+}
+
+.cf-show {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 44px;
+  padding: 0 0 0 12px;
+  border: 0;
+  background: transparent;
+  color: #c2410c;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cf-show:focus-visible {
+  outline: 2px solid #c2410c;
+  outline-offset: 2px;
+}
+
+/* Main button: solid, high contrast, always visible */
+.cf-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 50px;
+  margin: 8px 0 0;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 6px;
+  background: #0c1a33;
+  color: #ffffff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cf-btn:hover:not(:disabled) {
+  background: #1b2f57;
+}
+
+.cf-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cf-btn:focus-visible {
+  outline: 3px solid #ea580c;
+  outline-offset: 3px;
+}
+
+.cf-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: cf-spin 0.7s linear infinite;
+}
+
+@keyframes cf-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Messages */
+.cf-msg {
+  margin: 0 0 24px;
+  padding: 10px 14px;
+  border-left: 3px solid;
+  font-size: 0.92rem;
+}
+
+.cf-msg-error {
+  border-color: #d92d20;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.cf-msg-ok {
+  border-color: #12a150;
+  background: #ecfdf3;
+  color: #0b6e37;
+}
+
+/* Password strength */
+.cf-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: #4b5565;
+}
+
+.cf-strength-bar {
+  flex: 1;
+  height: 3px;
+  background: #e4e7ec;
+}
+
+.cf-strength-bar span {
+  display: block;
+  height: 100%;
+  transition: width 0.2s, background 0.2s;
+}
+
+.cf-strength[data-level="1"] .cf-strength-bar span { background: #d92d20; }
+.cf-strength[data-level="2"] .cf-strength-bar span { background: #dc8a00; }
+.cf-strength[data-level="3"] .cf-strength-bar span { background: #12a150; }
+
+.cf-switch {
+  margin: 32px 0 0;
+  color: #4b5565;
+  font-size: 0.95rem;
+}
+
+.cf-switch a {
+  color: #c2410c;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 860px) {
+  .cf-auth {
+    grid-template-columns: 1fr;
+    grid-auto-rows: min-content;
+  }
+  .cf-brand {
+    padding: 24px;
+    gap: 16px;
+  }
+  .cf-brand h1 { font-size: 1.9rem; }
+  .cf-brand-copy,
+    .cf-form-side { padding: 32px 24px 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-spinner { animation: none; }
+}

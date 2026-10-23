@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Local Environment secrets
+.env
+.env.production
+.env.local
+
+# Dynamic user workspaces (Crucial: prevents pushing cloned repos & generated compose files)
+workspaces/
+workspaces/*
+
+# Generated metrics & logs
+*.log
+metrics.log
+
+# Docker temporary state
+.docker/
+docker-compose.override.yml

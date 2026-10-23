@@ -1,0 +1,117 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap");
+
+.db-page {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  background: #f4f6f9;
+  color: #101828;
+  color-scheme: light;
+  text-align: left;
+  font-family: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+.db-page *, .db-page *::before, .db-page *::after { box-sizing: border-box; }
+
+/* sidebar */
+.db-side {
+  background: #0c1a33;
+  color: #fff;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.db-brand { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 36px; }
+.db-nav a, .db-nav span {
+  display: block;
+  padding: 9px 12px;
+  border-left: 3px solid #ff9a62;
+  background: rgba(255, 255, 255, 0.07);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.db-user { margin-top: auto; padding-top: 20px; border-top: 1px solid #263f6c; font-size: 0.9rem; }
+.db-user strong { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-logout {
+  margin-top: 8px; padding: 0; border: 0; background: none;
+  color: #ffb08a; font: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+}
+.db-logout:hover { text-decoration: underline; }
+
+/* main */
+.db-main { overflow-y: auto; padding: 40px 48px 64px; }
+.db-wrap { max-width: 980px; margin: 0 auto; }
+.db-main h1 { margin: 0 0 4px; font-size: 1.8rem; font-weight: 600; letter-spacing: -0.03em; }
+.db-lead { margin: 0 0 28px; color: #4b5565; }
+
+.db-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.db-panel { background: #fff; border: 1px solid #d9dfe8; border-radius: 10px; padding: 20px; }
+.db-panel h2 { margin: 0 0 4px; font-size: 1rem; font-weight: 600; }
+.db-panel p { margin: 0 0 14px; font-size: 0.88rem; color: #4b5565; }
+.db-row { display: flex; gap: 8px; }
+
+.db-input {
+  flex: 1; min-width: 0; height: 42px; padding: 0 12px;
+  border: 1.5px solid #c5cad6; border-radius: 6px; background: #fff;
+  font: inherit; font-size: 0.95rem; color: #101828;
+}
+.db-input:focus { outline: none; border-color: #c2410c; box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.15); }
+
+.db-btn {
+  height: 42px; padding: 0 18px; border: 0; border-radius: 6px;
+  background: #0c1a33; color: #fff; font: inherit; font-size: 0.92rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.db-btn:hover:not(:disabled) { background: #1b2f57; }
+.db-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.db-btn-ghost { background: #fff; color: #0c1a33; border: 1.5px solid #c5cad6; }
+.db-btn-ghost:hover:not(:disabled) { background: #f4f6f9; }
+
+.db-msg { margin: 0 0 16px; padding: 10px 14px; border-left: 3px solid; font-size: 0.92rem; }
+.db-msg-error { border-color: #d92d20; background: #fef3f2; color: #b42318; }
+.db-msg-ok { border-color: #12a150; background: #ecfdf3; color: #0b6e37; }
+
+/* rooms list */
+.db-list-head { display: flex; align-items: center; gap: 12px; margin: 28px 0 12px; }
+.db-list-head h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.db-count { font-size: 0.85rem; color: #4b5565; }
+.db-search { margin-left: auto; max-width: 260px; }
+
+.db-rooms { list-style: none; margin: 0; padding: 0; background: #fff; border: 1px solid #d9dfe8; border-radius: 10px; overflow: hidden; }
+.db-room {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) 150px 110px 110px 70px;
+  align-items: center; gap: 12px;
+  padding: 14px 20px; border-top: 1px solid #e4e7ec;
+}
+.db-room:first-child { border-top: 0; }
+.db-room:hover { background: #fafbfc; }
+.db-room-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.db-room-name a { font-weight: 600; color: #101828; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-room-name a:hover { color: #c2410c; }
+.db-tag { padding: 1px 8px; border-radius: 10px; background: #fff1e8; color: #c2410c; font-size: 0.72rem; font-weight: 600; }
+.db-id {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 8px; width: fit-content;
+  border: 1px solid #d9dfe8; border-radius: 6px; background: #f4f6f9; color: #344054;
+  font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.78rem; cursor: pointer;
+}
+.db-id:hover { border-color: #98a2b3; }
+.db-id em { font-style: normal; font-family: "Instrument Sans", sans-serif; font-weight: 600; color: #c2410c; }
+.db-meta { font-size: 0.88rem; color: #4b5565; }
+.db-open { justify-self: end; color: #c2410c; font-weight: 600; text-decoration: none; font-size: 0.92rem; }
+.db-open:hover { text-decoration: underline; }
+.db-empty { padding: 40px 20px; text-align: center; color: #4b5565; background: #fff; border: 1px dashed #c5cad6; border-radius: 10px; }
+
+@media (max-width: 860px) {
+  .db-page { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .db-side { flex-direction: row; align-items: center; padding: 14px 20px; gap: 16px; }
+  .db-brand { margin: 0; }
+  .db-nav { display: none; }
+  .db-user { margin: 0 0 0 auto; padding: 0; border: 0; text-align: right; }
+  .db-main { padding: 24px 20px 48px; }
+  .db-actions { grid-template-columns: 1fr; }
+  .db-room { grid-template-columns: 1fr auto; row-gap: 6px; }
+  .db-room .db-meta { display: none; }
+}
