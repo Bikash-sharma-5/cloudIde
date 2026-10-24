@@ -52,6 +52,12 @@ function apply(s, ops) {
       case "node:move":
         s.nodes = s.nodes.map((n) => (n.id === op.id ? { ...n, position: op.position } : n));
         break;
+      case "node:data": {   // version / cpu / memory / replicas edits from the inspector
+        const allowed = ["version", "label", "cpu", "memMB", "replicas"];
+        const patch = Object.fromEntries(Object.entries(op.data || {}).filter(([k]) => allowed.includes(k)));
+        s.nodes = s.nodes.map((n) => (n.id === op.id ? { ...n, data: { ...n.data, ...patch } } : n));
+        break;
+      }
       case "node:remove":
         s.nodes = s.nodes.filter((n) => n.id !== op.id);
         s.edges = s.edges.filter((e) => e.source !== op.id && e.target !== op.id);
@@ -97,3 +103,6 @@ module.exports = (io, socket) => {
     io.to(roomId).emit("workspace-ready", s.workspace);
   });
 };
+
+// lets the optimizer read the saved canvas (used by the simulated workload)
+module.exports.getNodes = async (roomId) => (await load(roomId)).nodes;

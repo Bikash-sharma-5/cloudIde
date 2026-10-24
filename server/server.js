@@ -18,6 +18,7 @@ app.use(express.json());
 connectDB();
 
 // API Routes
+ app.use("/api", require("./routes/optimizerRoutes"));
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/workspace", workspaceRoutes);

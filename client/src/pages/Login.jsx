@@ -1,7 +1,7 @@
 import { useState } from "react";
 import api from "../services/api";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { AuthLayout, PasswordField } from "./AuthLayout";
+import { AuthLayout, PasswordField, APP_NAME } from "./AuthLayout";
 
 export default function Login() {
   const nav = useNavigate();
@@ -31,7 +31,7 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(res.data.user));
       localStorage.setItem("userId", res.data.user._id);
 
-      nav("/dashboard");
+      nav(location.state?.from || "/dashboard", { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Email or password is incorrect.");
     } finally {
@@ -40,9 +40,9 @@ export default function Login() {
   };
 
   return (
-    <AuthLayout headline="Your DevOps hub.">
+    <AuthLayout headline="Code together, in the cloud.">
       <h2>Sign in</h2>
-      <p className="cf-sub">Welcome back. Enter your details to continue.</p>
+      <p className="cf-sub">Welcome back. Sign in to rejoin your rooms.</p>
 
       {justRegistered && !error && (
         <p className="cf-msg cf-msg-ok" role="status">
@@ -87,7 +87,7 @@ export default function Login() {
       </form>
 
       <p className="cf-switch">
-        New to CloudFlow? <Link to="/register">Create an account</Link>
+        New to {APP_NAME}? <Link to="/register">Create an account</Link>
       </p>
     </AuthLayout>
   );

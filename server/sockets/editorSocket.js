@@ -5,43 +5,17 @@ const path = require("path");
 const fs = require("fs-extra");
 const simpleGit = require("simple-git");
 const registerCanvasHandlers = require("./canvasHandlers");
+const { registerOptimizer, releaseRoom } = require("../optimizer");
 
-const activeIntervals = new Map();   // roomId -> metrics interval
 const roomUsers = {};                // roomId -> Map(userId -> user)
 const pullRequests = {};             // roomId -> PR list
-
-function generateMetrics() {
-  const algorithms = ["DVFS", "PSO", "ACO"];
-  const cpu = Math.random() * 100;
-  const memory = Math.random() * 1000;
-  const factor = { DVFS: 0.45, PSO: 0.35, ACO: 0.25 };
-
-  return algorithms.map((algo) => ({
-    cpu: Number(cpu.toFixed(2)),
-    memory: Number(memory.toFixed(2)),
-    energy: Number((cpu * factor[algo] + Math.random() * 2).toFixed(2)),
-    algorithm: algo,
-    time: Date.now(),
-  }));
-}
-
-const startMetricsStream = (io, roomId) => {
-  if (activeIntervals.has(roomId)) return;          // one stream per room
-  console.log(`📊 Metrics stream started for room: ${roomId}`);
-
-  const interval = setInterval(() => {
-    generateMetrics().forEach((metric) => {
-      io.to(roomId).emit("metrics-update", { ...metric, time: Date.now() });
-    });
-  }, 2000);
-
-  activeIntervals.set(roomId, interval);
-};
 
 module.exports = (io) => {
   io.on("connection", (socket) => {
     // canvas sync + saved workspace state (new)
     registerCanvasHandlers(io, socket);
+    // real metrics + resource optimizer (replaces the old Math.random() generator)
+    registerOptimizer(io, socket, registerCanvasHandlers.getNodes);
 
     // ===== GIT STATE =====
     const broadcastGitState = async (roomId, userId) => {
@@ -92,8 +66,6 @@ module.exports = (io) => {
       });
 
       io.to(roomId).emit("user-presence-update", Array.from(roomUsers[roomId].values()));
-
-      startMetricsStream(io, roomId);
 
       if (socket.gitWatcher) clearInterval(socket.gitWatcher);
       broadcastGitState(roomId, user.id);
@@ -196,10 +168,9 @@ module.exports = (io) => {
 
       io.to(roomId).emit("user-presence-update", Array.from(roomUsers[roomId].values()));
 
-      // last person left: stop the metrics timer
+      // last person left: stop this room's optimizer loop
       if (roomUsers[roomId].size === 0) {
-        clearInterval(activeIntervals.get(roomId));
-        activeIntervals.delete(roomId);
+        releaseRoom(roomId);
         delete roomUsers[roomId];
       }
     });
