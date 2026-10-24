@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import axios from "axios";
 import api from "../services/api";
 import { useParams, Link } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -17,9 +16,13 @@ import "@xyflow/react/dist/style.css";
 import MetricsPanel from "./MetricsPanel";
 import "./Room.css";
 
-const API_URL = import.meta.env?.VITE_SOCKET_URL || "http://localhost:5050/api";// move to an env variable before deploying
+// Socket server URL root (removes /api suffix)
+const SOCKET_SERVER_URL = (
+  import.meta.env?.VITE_SOCKET_URL ||
+  import.meta.env?.VITE_API_URL ||
+  "https://collabide.duckdns.org"
+).replace(/\/api\/?$/, "").replace(/\/+$/, "");
 
-// Used only if GET /api/catalog fails. The real list (with versions) lives on the server.
 const FALLBACK_CATALOG = [
   { type: "node", label: "Node.js", versions: ["20"], defaultVersion: "20", color: "#3c873a", cpu: 0.5, memMB: 256 },
   { type: "python", label: "Python", versions: ["3.11"], defaultVersion: "3.11", color: "#3572A5", cpu: 0.5, memMB: 256 },
@@ -31,7 +34,6 @@ const FALLBACK_CATALOG = [
 const initials = (name = "?") =>
   name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
-// Apply canvas operations (same logic runs on the server)
 function applyNodeOps(nodes, ops) {
   return ops.reduce((acc, op) => {
     if (op.type === "node:add") return acc.some((n) => n.id === op.node.id) ? acc : [...acc, op.node];
@@ -41,6 +43,7 @@ function applyNodeOps(nodes, ops) {
     return acc;
   }, nodes);
 }
+
 function applyEdgeOps(edges, ops) {
   return ops.reduce((acc, op) => {
     if (op.type === "edge:add") return acc.some((e) => e.id === op.edge.id) ? acc : [...acc, op.edge];
@@ -69,14 +72,14 @@ function RoomContent() {
   let storedUser = {};
   try { storedUser = JSON.parse(localStorage.getItem("user") || "{}"); } catch { storedUser = {}; }
 
-  // guest id must be created once, not on every render
   const [guestId] = useState(() => "guest-" + Math.random().toString(36).slice(2));
-  const userId = storedUser?._id || guestId;
+  const userId = storedUser?._id || storedUser?.id || guestId;
   const userName = storedUser?.fullName || storedUser?.name || "Guest";
 
   const [repoUrl, setRepoUrl] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
-  const [savedRepoUrl, setSavedRepoUrl] = useState(""); // set once per room, reused after
+  const [savedRepoUrl, setSavedRepoUrl] = useState("");
+  const [workspacePassword, setWorkspacePassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [syncingInfra, setSyncingInfra] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
@@ -86,10 +89,10 @@ function RoomContent() {
 
   const [catalog, setCatalog] = useState(FALLBACK_CATALOG);
   const [selectedId, setSelectedId] = useState(null);
-  const [detected, setDetected] = useState(null);          // { services, conflicts }
+  const [detected, setDetected] = useState(null);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const [optimizer, setOptimizer] = useState({ mode: "OBSERVE", modes: ["OBSERVE"] });
-  const [series, setSeries] = useState({});                 // algorithm -> [{t, power, util, unmet}]
+  const [series, setSeries] = useState({});
   const [liveContainers, setLiveContainers] = useState([]);
   const [allocation, setAllocation] = useState(null);
   const [dataSource, setDataSource] = useState("");
@@ -111,13 +114,12 @@ function RoomContent() {
     [id]
   );
 
-  // Sync topology to the Docker backend
   const triggerBackendSync = useCallback(
     async (updatedNodes) => {
       if (!isInitialized) return;
       try {
         setSyncingInfra(true);
-        await axios.post(`${API_URL}/api/workspace/sync`, { roomId: id, userId, nodes: updatedNodes, assignedPort });
+        await api.post("/workspace/sync", { roomId: id, userId, nodes: updatedNodes, assignedPort });
       } catch (err) {
         console.error("Infrastructure sync error:", err);
       } finally {
@@ -131,16 +133,13 @@ function RoomContent() {
     api.get("/catalog").then(({ data }) => Array.isArray(data) && data.length && setCatalog(data)).catch(() => {});
   }, []);
 
-  // Repo URL + "workspace ready" live on the room in the database,
-  // so every member sees the same thing, even before the socket connects.
   useEffect(() => {
-    const headers = { Authorization: localStorage.getItem("token") };
     api
-      .post("/rooms/join", { roomId: id }, { headers })          // idempotent: opening a link joins the room
+      .post("/rooms/join", { roomId: id })
       .catch((err) => {
         if (err.response?.status === 404) setNotice("This room doesn't exist.");
       })
-      .then(() => api.get(`/rooms/${id}`, { headers }))
+      .then(() => api.get(`/rooms/${id}`))
       .then(({ data }) => {
         if (data.workspaceReady) {
           setIsInitialized(true);
@@ -151,21 +150,19 @@ function RoomContent() {
       .catch(() => {});
   }, [id]);
 
-  // Socket lifecycle
   useEffect(() => {
-    const socket = io(API_URL);
+    const socket = io(SOCKET_SERVER_URL, {
+      transports: ["websocket", "polling"]
+    });
     socketRef.current = socket;
 
     socket.on("connect", () => {
       setConnected(true);
-      // on every (re)connect: join and the server replies with the saved canvas
       socket.emit("join-room", { roomId: id, user: { id: userId, name: userName } });
     });
     socket.on("disconnect", () => setConnected(false));
 
-    // Full saved state: sent to you when you enter or re-enter the room
     socket.on("canvas-state", ({ nodes: n = [], edges: e = [], workspace }) => {
-      console.log("[room] canvas-state received:", n.length, "nodes");
       setNodes(n);
       setEdges(e);
       if (workspace?.ready) {
@@ -176,7 +173,6 @@ function RoomContent() {
       setTimeout(() => fitViewRef.current({ padding: 0.3, duration: 200 }), 60);
     });
 
-    // Small changes made by other people
     socket.on("canvas-ops", ({ ops }) => {
       setNodes((nds) => applyNodeOps(nds, ops));
       setEdges((eds) => applyEdgeOps(eds, ops));
@@ -187,7 +183,7 @@ function RoomContent() {
     socket.on("allocation-update", (d) => setAllocation(d));
     socket.on("metrics-update", (m) => {
       if (!m?.algorithm) return;
-      const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);   // old/foreign payloads may lack fields
+      const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
       setSeries((prev) => ({
         ...prev,
         [m.algorithm]: [...(prev[m.algorithm] || []), { t: m.time, power: num(m.energy), util: num(m.cpu), unmet: num(m.unmet) }].slice(-60),
@@ -205,7 +201,6 @@ function RoomContent() {
     return () => socket.disconnect();
   }, [id, userId, userName]);
 
-  // Canvas callbacks (state is updated purely; changes are turned into small ops)
   const onNodesChange = useCallback(
     (changes) => {
       setNodes((nds) => applyNodeChanges(changes, nds));
@@ -262,7 +257,6 @@ function RoomContent() {
       const { type } = JSON.parse(raw);
       const service = catalog.find((c) => c.type === type);
       if (!service) return;
-      // screenToFlowPosition respects zoom and pan
       const position = screenToFlowPosition({ x: event.clientX - 75, y: event.clientY - 20 });
 
       const newNode = makeNode(service, position, userName);
@@ -273,21 +267,19 @@ function RoomContent() {
     [catalog, screenToFlowPosition, sendOps, triggerBackendSync, userName]
   );
 
-  // Inspector: change version / CPU / memory / replicas of the selected node
   const updateNodeData = useCallback(
     (nid, patch) => {
       setNodes((nds) => nds.map((n) => (n.id === nid ? { ...n, data: { ...n.data, ...patch } } : n)));
       sendOps([{ type: "node:data", id: nid, data: patch }]);
-      clearTimeout(syncTimer.current);                         // re-provision once the user stops editing
+      clearTimeout(syncTimer.current);
       syncTimer.current = setTimeout(() => triggerBackendSync(nodesRef.current), 700);
     },
     [sendOps, triggerBackendSync]
   );
 
-  // Repo analysis: suggest services + versions, report conflicting pins
   const detectFromRepo = async () => {
     try {
-      const { data } = await api.get("/detect", { params: { roomId: id, userId }, headers: { Authorization: localStorage.getItem("token") } });
+      const { data } = await api.get("/detect", { params: { roomId: id, userId } });
       setDetected(data);
     } catch {
       setNotice("Couldn't analyse the repo yet. Launch the workspace first.");
@@ -313,7 +305,7 @@ function RoomContent() {
 
   const exportCsv = async () => {
     try {
-      const res = await api.get("/metrics/export", { params: { roomId: id }, headers: { Authorization: localStorage.getItem("token") }, responseType: "blob" });
+      const res = await api.get("/metrics/export", { params: { roomId: id }, responseType: "blob" });
       const url = URL.createObjectURL(res.data);
       const a = document.createElement("a");
       a.href = url; a.download = `metrics-${id}.csv`; a.click();
@@ -325,31 +317,33 @@ function RoomContent() {
     if (loading) return;
     setNotice("");
 
-    // first launch uses what was typed; every launch after that reuses the saved URL
     const repo = savedRepoUrl || repoUrl.trim();
     if (!repo) return setNotice("Enter a GitHub repo URL to launch this room.");
 
-    const win = window.open("", "_blank"); // opened first so popup blockers allow it
+    const win = window.open("", "_blank");
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/api/workspace/create`, {
-        roomId: id, userId, repoUrl: repo, nodes: nodesRef.current
+      const res = await api.post("/workspace/create", {
+        roomId: id,
+        userId,
+        repoUrl: repo,
+        nodes: nodesRef.current
       });
 
       if (res.data?.editorUrl) {
+        if (res.data.accessPassword) {
+          setWorkspacePassword(res.data.accessPassword);
+        }
+
         if (win) win.location.href = res.data.editorUrl;
         else window.open(res.data.editorUrl, "_blank");
+
         setIsInitialized(true);
         if (res.data.port) setAssignedPort(res.data.port);
         setSavedRepoUrl(repo);
-        api
-          .patch(
-            `/rooms/${id}/workspace`,
-            { repoUrl: repo, port: res.data.port },
-            { headers: { Authorization: localStorage.getItem("token") } }
-          )
-          .catch(() => {});
+
+        api.patch(`/rooms/${id}/workspace`, { repoUrl: repo, port: res.data.port }).catch(() => {});
         socketRef.current?.emit("workspace-created", { roomId: id, port: res.data.port, repoUrl: repo });
       } else {
         win?.close();
@@ -377,7 +371,6 @@ function RoomContent() {
 
   return (
     <div className="rm-page">
-      {/* TOP BAR: navigation + status only */}
       <header className="rm-top">
         <Link to="/dashboard" className="rm-back">← Rooms</Link>
         <span className="rm-code" title={id}>Room …{id.slice(-6)}</span>
@@ -391,7 +384,6 @@ function RoomContent() {
       </header>
 
       <div className="rm-body">
-        {/* LEFT: palette, repo detection, people */}
         <aside className="rm-side">
           <section className="rm-section">
             <h4>Services</h4>
@@ -447,11 +439,15 @@ function RoomContent() {
         </aside>
 
         <main className="rm-main">
-          {/* TOOLBAR: launch controls live here, not on top of the nodes */}
           <div className="rm-toolbar">
             {isInitialized ? (
               <>
                 <span className="rm-repo" title={savedRepoUrl}>{repoLabel || "Workspace ready"}</span>
+                {workspacePassword && (
+                  <span className="rm-badge" title="Use this password to log in to code-server if prompted">
+                    Pass: <strong>{workspacePassword}</strong>
+                  </span>
+                )}
                 <span className="rm-spacer" />
                 <button className="rm-primary" onClick={startWorkspace} disabled={loading}>
                   {loading ? "Opening…" : "Open code workspace"}
@@ -502,7 +498,6 @@ function RoomContent() {
               <Controls position="bottom-left" />
             </ReactFlow>
 
-            {/* floating inspector for the selected node */}
             {selected && selectedSvc && (
               <aside className="rm-inspector">
                 <div className="rm-inspector-head">
@@ -510,22 +505,30 @@ function RoomContent() {
                   <button onClick={() => setSelectedId(null)} aria-label="Close">×</button>
                 </div>
                 <label>Version
-                  <select value={selected.data.version}
-                    onChange={(e) => updateNodeData(selected.id, { version: e.target.value, label: `${selected.data.baseLabel || selectedSvc.label} ${e.target.value}` })}>
+                  <select
+                    value={selected.data.version}
+                    onChange={(e) => updateNodeData(selected.id, { version: e.target.value, label: `${selected.data.baseLabel || selectedSvc.label} ${e.target.value}` })}
+                  >
                     {selectedSvc.versions.map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </label>
                 <label>CPU request (cores)
-                  <input type="number" min="0.1" max="8" step="0.25" value={selected.data.cpu}
-                    onChange={(e) => updateNodeData(selected.id, { cpu: Math.min(8, Math.max(0.1, +e.target.value || 0.1)) })} />
+                  <input
+                    type="number" min="0.1" max="8" step="0.25" value={selected.data.cpu}
+                    onChange={(e) => updateNodeData(selected.id, { cpu: Math.min(8, Math.max(0.1, +e.target.value || 0.1)) })}
+                  />
                 </label>
                 <label>Memory (MB)
-                  <input type="number" min="64" max="8192" step="64" value={selected.data.memMB}
-                    onChange={(e) => updateNodeData(selected.id, { memMB: Math.min(8192, Math.max(64, +e.target.value || 64)) })} />
+                  <input
+                    type="number" min="64" max="8192" step="64" value={selected.data.memMB}
+                    onChange={(e) => updateNodeData(selected.id, { memMB: Math.min(8192, Math.max(64, +e.target.value || 64)) })}
+                  />
                 </label>
                 <label>Replicas
-                  <input type="number" min="1" max="10" step="1" value={selected.data.replicas}
-                    onChange={(e) => updateNodeData(selected.id, { replicas: Math.min(10, Math.max(1, Math.round(+e.target.value || 1))) })} />
+                  <input
+                    type="number" min="1" max="10" step="1" value={selected.data.replicas}
+                    onChange={(e) => updateNodeData(selected.id, { replicas: Math.min(10, Math.max(1, Math.round(+e.target.value || 1))) })}
+                  />
                 </label>
               </aside>
             )}

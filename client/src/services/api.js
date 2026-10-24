@@ -1,10 +1,11 @@
 import axios from "axios";
 
-// Automatically uses VITE_API_URL in production or defaults to localhost:5050 (or 5000)
-const baseURL = import.meta.env?.VITE_API_URL || "http://localhost:5050/api";
+// Normalize baseURL so it does not contain a trailing slash or accidental double /api
+let rawBaseUrl = import.meta.env?.VITE_API_URL || "https://collabide.duckdns.org/api";
+rawBaseUrl = rawBaseUrl.replace(/\/+$/, "");
 
 const API = axios.create({
-  baseURL,
+  baseURL: rawBaseUrl,
   headers: {
     "Content-Type": "application/json"
   }
@@ -14,8 +15,9 @@ const API = axios.create({
 API.interceptors.request.use((config) => {
   try {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (storedUser?.token) {
-      config.headers.Authorization = `Bearer ${storedUser.token}`;
+    const token = storedUser?.token || storedUser?.data?.token;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
   } catch {
     // Ignore JSON parse errors
@@ -33,12 +35,9 @@ export const createRoom = (data) => API.post("/rooms/create", data);
 /* --------------------------
    WORKSPACE APIs
 ---------------------------*/
-export const createWorkspace = (data) =>
-  API.post("/workspace/create", data);
+export const createWorkspace = (data) => API.post("/workspace/create", data);
 
-// Sync dragged nodes & infrastructure topology to Docker
-export const syncInfrastructure = (data) =>
-  API.post("/workspace/sync", data);
+export const syncInfrastructure = (data) => API.post("/workspace/sync", data);
 
 export const getFiles = (roomId, userId) =>
   API.get(`/workspace/files/${roomId}/${userId}`);
@@ -48,8 +47,7 @@ export const getFileContent = (roomId, userId, filePath) =>
     params: { roomId, userId, filePath }
   });
 
-export const saveFile = (data) =>
-  API.post("/workspace/save", data);
+export const saveFile = (data) => API.post("/workspace/save", data);
 
 export const readFile = (roomId, userId, file) =>
   API.get(`/workspace/file/${roomId}/${userId}`, {

@@ -46,7 +46,6 @@ if (workspaceController && typeof workspaceController.attachIO === "function") {
 }
 setupSocketLogic(io);
 
-// Default to 5050 to avoid port 5000 conflicts
 const PORT = process.env.PORT || 5050;
 
 server.listen(PORT, "0.0.0.0", () => {

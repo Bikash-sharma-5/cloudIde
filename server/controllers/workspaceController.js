@@ -2,6 +2,7 @@ const simpleGit = require("simple-git");
 const fs = require("fs-extra");
 const path = require("path");
 const net = require("net");
+const crypto = require("crypto");
 const yaml = require("js-yaml");
 const Docker = require("dockerode");
 const { exec, execSync } = require("child_process");
@@ -28,9 +29,11 @@ exports.attachIO = (io) => {
 };
 
 // --------------------------------------
-// 🧠 HELPER: PORT SCANNER
+// 🧠 HELPER: PORT SCANNER (Avoids port 5000/5050/80/443)
 // --------------------------------------
 const findAvailablePort = (startPort) => {
+  if (startPort < 9000) startPort = 9000;
+
   return new Promise((resolve) => {
     const server = net.createServer();
     server.listen(startPort, () => {
@@ -141,7 +144,7 @@ const detectDependencies = async (workspacePath) => {
 };
 
 // --------------------------------------
-// 🐳 DOCKER COMPOSE GENERATOR (NODE-DRIVEN)
+// 🐳 DOCKER COMPOSE GENERATOR
 // --------------------------------------
 const generateComposeYaml = (
   nodes = [],
@@ -149,7 +152,8 @@ const generateComposeYaml = (
   roomId,
   port,
   workspacePath,
-  algorithm = "DVFS"
+  algorithm = "DVFS",
+  sessionPassword = ""
 ) => {
   const suffix = roomId.substring(0, 6);
   const basePort = parseInt(port, 10);
@@ -157,7 +161,7 @@ const generateComposeYaml = (
 
   const services = {};
 
-  // 1. CORE VS CODE EDITOR CONTAINER
+  // 1. CORE VS CODE EDITOR CONTAINER (Secured with session password)
   services[`workspace-${suffix}`] = {
     image: "dev-workspace",
     container_name: `workspace-core-${suffix}`,
@@ -173,11 +177,12 @@ const generateComposeYaml = (
     environment: {
       ROOM_ID: roomId,
       USER_ID: "auto",
-      ALGORITHM: algorithm
+      ALGORITHM: algorithm,
+      PASSWORD: sessionPassword
     },
     command: `
 sh -c "
-code-server --bind-addr 0.0.0.0:8080 --auth none /workspace &
+code-server --bind-addr 0.0.0.0:8080 --auth ${sessionPassword ? "password" : "none"} /workspace &
 sleep 5 &&
 if [ -f /workspace/runExperiment.js ]; then node /workspace/runExperiment.js; fi &&
 tail -f /dev/null
@@ -185,7 +190,7 @@ tail -f /dev/null
 `
   };
 
-  // 2. EXTRACT SERVICES FROM DRAGGED REACTFLOW CANVAS NODES
+  // 2. EXTRACT SERVICES FROM NODES
   const activeServiceTypes = new Set();
 
   nodes.forEach((n) => {
@@ -199,7 +204,7 @@ tail -f /dev/null
 
   detectedDeps.forEach((dep) => activeServiceTypes.add(dep));
 
-  // 3. ATTACH DYNAMIC SERVICE CONTAINERS
+  // 3. ATTACH DYNAMIC SERVICE CONTAINERS (Bound locally to 127.0.0.1 for isolation)
   if (activeServiceTypes.has("python")) {
     services[`python-${suffix}`] = {
       image: "python:3.11-slim",
@@ -215,7 +220,7 @@ tail -f /dev/null
     services[`redis-${suffix}`] = {
       image: "redis:7-alpine",
       container_name: `workspace-redis-${suffix}`,
-      ports: [`${basePort + 200}:6379`],
+      ports: [`127.0.0.1:${basePort + 200}:6379`],
       networks: ["cloud-net"]
     };
   }
@@ -229,7 +234,7 @@ tail -f /dev/null
         POSTGRES_PASSWORD: "password",
         POSTGRES_DB: "cloudflow"
       },
-      ports: [`${basePort + 300}:5432`],
+      ports: [`127.0.0.1:${basePort + 300}:5432`],
       networks: ["cloud-net"]
     };
   }
@@ -238,7 +243,7 @@ tail -f /dev/null
     services[`mongo-${suffix}`] = {
       image: "mongo:6-jammy",
       container_name: `workspace-mongo-${suffix}`,
-      ports: [`${basePort + 400}:27017`],
+      ports: [`127.0.0.1:${basePort + 400}:27017`],
       networks: ["cloud-net"]
     };
   }
@@ -274,16 +279,18 @@ exports.createWorkspace = async (req, res) => {
       return res.status(404).json({ error: "Room not found" });
     }
 
+    // Allocate port starting safely at 9000
     const port = await findAvailablePort(9000);
     const workspacePath = path.resolve("workspaces", roomId, userId);
     const containerName = `workspace-core-${roomId.substring(0, 6)}`;
 
+    // Generate unique session password for security
+    const sessionToken = crypto.randomBytes(8).toString("hex");
+
     // Ensure external network exists
     try {
       execSync("docker network create cloud-net", { stdio: "ignore" });
-    } catch (_) {
-      // cloud-net already exists
-    }
+    } catch (_) {}
 
     // Stop and remove existing container instance if one exists
     try {
@@ -323,7 +330,8 @@ exports.createWorkspace = async (req, res) => {
       roomId,
       port,
       workspacePath,
-      algorithm
+      algorithm,
+      sessionToken
     );
 
     const yamlPath = path.join(workspacePath, "docker-compose.yml");
@@ -343,8 +351,6 @@ exports.createWorkspace = async (req, res) => {
         await new Promise((resolve) => setTimeout(resolve, 3500));
 
         await getGitData(workspacePath, roomId);
-
-        // Stream Docker stdout logs for real-time metrics
         startMetricsStream(roomId, containerName);
 
         // Secondary fallback metric file watcher
@@ -374,12 +380,15 @@ exports.createWorkspace = async (req, res) => {
         }, 2500);
 
         activeMetricsIntervals.set(workspaceKey, intervalId);
-
         activeWorkspaces.delete(workspaceKey);
 
+        // Resolve live domain (strips incoming port if present in header)
+        const host = req.get("host")?.split(":")[0] || "collabide.duckdns.org";
+
         return res.json({
-          editorUrl: `http://localhost:${port}`,
-          previewUrl: `http://localhost:${port + 1000}`,
+          editorUrl: `http://${host}:${port}/?folder=/workspace`,
+          previewUrl: `http://${host}:${port + 1000}`,
+          accessPassword: sessionToken,
           port,
           message: "Workspace ready"
         });
@@ -417,7 +426,6 @@ exports.syncInfrastructure = async (req, res) => {
     const yamlPath = path.join(workspacePath, "docker-compose.yml");
     await fs.writeFile(yamlPath, yamlContent);
 
-    // Apply incremental changes without stopping VS Code
     exec(
       `docker-compose -f "${yamlPath}" up -d --remove-orphans`,
       (err, stdout, stderr) => {
