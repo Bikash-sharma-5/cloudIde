@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import MetricsPanel from "./MetricsPanel";
 import "./Room.css";
 
-const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:5050/api";// move to an env variable before deploying
+const API_URL = import.meta.env?.VITE_SOCKET_UR || "http://localhost:5050/api";// move to an env variable before deploying
 
 // Used only if GET /api/catalog fails. The real list (with versions) lives on the server.
 const FALLBACK_CATALOG = [
