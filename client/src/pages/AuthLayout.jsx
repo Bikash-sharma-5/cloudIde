@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./auth.css";
+import "./Auth.css";
 
 // Change this one line to rename the product everywhere in the auth pages.
 export const APP_NAME = "CollabIDE";

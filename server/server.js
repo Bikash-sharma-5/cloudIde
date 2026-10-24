@@ -8,17 +8,20 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const roomRoutes = require("./routes/roomRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
-const setupSocketLogic = require("./sockets/editorSocket"); // Renamed for clarity
+const setupSocketLogic = require("./sockets/editorSocket");
+const workspaceController = require("./controllers/workspaceController");
 
 const app = express();
-app.use(cors());
+
+// Middleware
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// Initialize Database
+// Initialize MongoDB Database
 connectDB();
 
 // API Routes
- app.use("/api", require("./routes/optimizerRoutes"));
+app.use("/api", require("./routes/optimizerRoutes"));
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/workspace", workspaceRoutes);
@@ -30,15 +33,22 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: "*", // In production, replace with your frontend URL
+    origin: "*",
     methods: ["GET", "POST"]
   }
 });
+
 global.ioInstance = io;
-// Attach Socket Logic
+
+// Wire up Socket handlers
+if (workspaceController && typeof workspaceController.attachIO === "function") {
+  workspaceController.attachIO(io);
+}
 setupSocketLogic(io);
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Default to 5050 to avoid port 5000 conflicts
+const PORT = process.env.PORT || 5050;
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
